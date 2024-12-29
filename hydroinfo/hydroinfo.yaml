@@ -1,0 +1,4 @@
+HydrologyData:
+  class: HydrologyData
+  module: hydroinfo
+  allomas_voa: "1649619E-97AB-11D4-BB62-00508BA24287"

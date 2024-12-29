@@ -1,2 +1,2 @@
 # hydroinfo
-HydrologyData AppDaemon Integration
+[HydrologyData AppDaemon Integration](hydroinfo/README.md)
