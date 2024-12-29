@@ -43,6 +43,8 @@ class HydrologyData(hass.Hass):
                 self.log("The 'vizmercelista' table was not found.", level="ERROR")
                 return
 
+            processed_water_temperature_row = False
+            processed_water_level_row = False
             # Iterate through the rows, skipping the header row
             allomas_list = islice(table.find_all("tr"), 1, None)
             for row in allomas_list:
@@ -53,33 +55,36 @@ class HydrologyData(hass.Hass):
                 # Log the content of cols
                 self.log(f"Extracted columns: {cols}")
 
-                # Extract relevant values
-                if len(cols) < 4:
-                    self.log(f"Incomplete data in row: {cols}", level="WARNING")
+                # Validate if the row has at least 3 non-empty values
+                non_empty_count = sum(1 for col in cols if col.strip())
+                if len(cols) < 4 or non_empty_count < 2:
+                    self.log(f"Not enough valid data, skipping row: {cols}", level="WARNING")
                     continue
-
+                
                 timestamp = cols[0]
                 water_level = cols[1]  # Vízállás (cm)
                 water_temp = cols[3]  # Vízhő (°C)
 
-                # Validate and process water level sensor
-                if water_level and water_level.isdigit():
-                    water_level_value = int(water_level)
-                    self.set_state(
-                        "sensor.agard_water_level",
-                        state=water_level_value,
-                        unit_of_measurement="cm",
-                        attributes={
-                            "state_class": "measurement",
-                            "last_changed": timestamp,
-                            "unit_of_measurement": "cm",
-                            "friendly_name": "Agárd Water Level",
-                            "device_class": "measurement",
-                        },
-                    )
-                    self.log(f"Water level sensor updated: {timestamp} - {water_level_value} cm")
-                else:
-                    self.log(f"Invalid water level value: {water_level}", level="WARNING")
+                if not processed_water_level_row:
+                    # Validate and process water level sensor
+                    if water_level and water_level.isdigit():
+                        water_level_value = int(water_level)
+                        self.set_state(
+                            "sensor.agard_water_level",
+                            state=water_level_value,
+                            unit_of_measurement="cm",
+                            attributes={
+                                "state_class": "measurement",
+                                "last_changed": timestamp,
+                                "unit_of_measurement": "cm",
+                                "friendly_name": "Agárd Water Level",
+                                "device_class": "measurement",
+                            },
+                        )
+                        self.log(f"Water level sensor updated: {timestamp} - {water_level_value} cm")
+                        processed_water_level_row = True
+                    else:
+                        self.log(f"Invalid water level value: {water_level}", level="WARNING")
 
                 # Validate and process water temperature sensor
                 try:
@@ -98,10 +103,13 @@ class HydrologyData(hass.Hass):
                             },
                         )
                         self.log(f"Water temperature sensor updated: {timestamp} - {water_temp_value} °C")
+                        processed_water_temperature_row = True
                 except ValueError as e:
                     self.log(f"Failed to convert water temperature value: {water_temp} - Error: {e}", level="WARNING")
 
-                break  # Only process the first valid row
+                # Stop processing after the first valid row
+                if (processed_water_temperature_row):
+                    break
 
         except Exception as e:
             # Log any unexpected errors
