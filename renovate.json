@@ -7,7 +7,7 @@
   ],
   "pip_requirements": {
     "fileMatch": [
-      "**/requirements.txt"
+      "(?<!/)/requirements\\.txt$"
     ],
     "enabled": true
   },
