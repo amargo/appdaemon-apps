@@ -1,0 +1,17 @@
+name: Renovate
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * SUN" # Minden vasárnap hajnali 3-kor futtatás
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run Renovate
+        uses: renovatebot/github-action@v39
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
