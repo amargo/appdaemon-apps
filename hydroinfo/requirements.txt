@@ -1,5 +1,5 @@
-requests
-bs4
-pytz
+requests>=2.32.3
+beautifulsoup4>=4.12.2
+pytz>=2025.1
 itertools
-fake_useragent
+fake_useragent>=2.0.3

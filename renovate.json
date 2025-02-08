@@ -1,19 +1,7 @@
 {
   "extends": [
-    "config:best-practices",
-    "config:base",
-    "group:allNonMajor",
-    "group:linters"
+    "config:recommended"
   ],
-  "pip_requirements": {
-    "fileMatch": [
-      "(?<!/)/requirements\\.txt$"
-    ],
-    "enabled": true
-  },
-  "github-actions": {
-    "enabled": true
-  },
   "packageRules": [
     {
       "description": "Auto PR and merge for vulnerability fixes",
@@ -46,8 +34,5 @@
     }
   ],
   "commitMessageAction": "Update dependencies",
-  "commitMessagePrefix": "chore(deps):",
-  "schedule": [
-    "every weekend"
-  ]
+  "commitMessagePrefix": "chore(deps):"
 }
