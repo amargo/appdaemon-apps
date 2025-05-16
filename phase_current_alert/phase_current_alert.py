@@ -1,5 +1,6 @@
 import hassapi as hass
 import datetime
+import traceback
 
 class PhaseCurrentAlert(hass.Hass):
     """
@@ -11,47 +12,83 @@ class PhaseCurrentAlert(hass.Hass):
     
     def initialize(self):
         """Initialize the app."""
-        self.log("Phase Current Alert app initializing")
-        
-        # Get configuration parameters
-        self.threshold_l1 = float(self.args.get("threshold_l1", 16))
-        self.threshold_l2 = float(self.args.get("threshold_l2", 16))
-        self.threshold_l3 = float(self.args.get("threshold_l3", 32))
-        
-        self.sensor_l1 = self.args.get("sensor_l1", "sensor.pillanatnyi_aramerosseg_l1")
-        self.sensor_l2 = self.args.get("sensor_l2", "sensor.pillanatnyi_aramerosseg_l2")
-        self.sensor_l3 = self.args.get("sensor_l3", "sensor.pillanatnyi_aramerosseg_l3")
-        
-        self.notification_service = self.args.get("notification_service", "notify/mobile_app")
-        
-        # Get notification interval in seconds (default: 60 seconds = 1 minute)
-        self.notification_interval = int(self.args.get("notification_interval", 60))
-        
-        # Time tracking for notification throttling
-        self.last_notification_time = {
-            "l1": None,
-            "l2": None,
-            "l3": None
-        }
-        
-        # Set up listeners for the current sensors
-        self.listen_state(self.current_changed, self.sensor_l1)
-        self.listen_state(self.current_changed, self.sensor_l2)
-        self.listen_state(self.current_changed, self.sensor_l3)
-        
-        # Schedule a regular check
-        self.run_every(self.check_current_values, "now", self.notification_interval)
-        
-        self.log(f"Phase Current Alert initialized with thresholds - L1: {self.threshold_l1}A, L2: {self.threshold_l2}A, L3: {self.threshold_l3}A, notification interval: {self.notification_interval} seconds")
+        try:
+            self.log("Phase Current Alert app initializing")
+            
+            # Get configuration parameters
+            self.threshold_l1 = float(self.args.get("threshold_l1", 16))
+            self.threshold_l2 = float(self.args.get("threshold_l2", 16))
+            self.threshold_l3 = float(self.args.get("threshold_l3", 32))
+            
+            self.sensor_l1 = self.args.get("sensor_l1", "sensor.pillanatnyi_aramerosseg_l1")
+            self.sensor_l2 = self.args.get("sensor_l2", "sensor.pillanatnyi_aramerosseg_l2")
+            self.sensor_l3 = self.args.get("sensor_l3", "sensor.pillanatnyi_aramerosseg_l3")
+            
+            self.notification_service = self.args.get("notification_service", "notify/mobile_app")
+            
+            # Get notification interval in seconds (default: 60 seconds = 1 minute)
+            self.notification_interval = int(self.args.get("notification_interval", 60))
+            
+            # Time tracking for notification throttling
+            self.last_notification_time = {
+                "l1": None,
+                "l2": None,
+                "l3": None
+            }
+            
+            # Store handles to listeners and timers
+            self.listener_handles = []
+            self.timer_handles = []
+            
+            # Set up listeners for the current sensors
+            self.listener_handles.append(self.listen_state(self.current_changed, self.sensor_l1))
+            self.listener_handles.append(self.listen_state(self.current_changed, self.sensor_l2))
+            self.listener_handles.append(self.listen_state(self.current_changed, self.sensor_l3))
+            
+            # Schedule a regular check
+            self.timer_handles.append(self.run_every(self.check_current_values, "now", self.notification_interval))
+            
+            # Perform an initial check of all sensors
+            self.run_in(self.check_current_values, 5)  # Check after 5 seconds to ensure sensors are loaded
+            
+            self.log(f"Phase Current Alert initialized with thresholds - L1: {self.threshold_l1}A, L2: {self.threshold_l2}A, L3: {self.threshold_l3}A, notification interval: {self.notification_interval} seconds")
+        except Exception as e:
+            self.log(f"Error during initialization: {e}", level="ERROR")
+            self.log(f"Traceback: {traceback.format_exc()}", level="ERROR")
+    
+    def terminate(self):
+        """Clean up when app is terminated."""
+        try:
+            # Cancel all registered listeners
+            for handle in self.listener_handles:
+                self.cancel_listen_state(handle)
+            
+            # Cancel all timers
+            for handle in self.timer_handles:
+                self.cancel_timer(handle)
+                
+            self.log("Phase Current Alert terminated cleanly")
+        except Exception as e:
+            self.log(f"Error during termination: {e}", level="ERROR")
     
     def current_changed(self, entity, attribute, old, new, kwargs):
         """Handle state changes for current sensors."""
-        self.check_specific_sensor(entity)
+        try:
+            if new is not None and new != old:  
+                self.check_specific_sensor(entity)
+        except Exception as e:
+            self.log(f"Error in current_changed: {e}", level="ERROR")
     
     def check_specific_sensor(self, entity):
         """Check a specific sensor against its threshold."""
         try:
-            current_value = float(self.get_state(entity))
+            # Get the current state, handling potential None or unavailable values
+            state = self.get_state(entity)
+            if state is None or state in ["unavailable", "unknown"]:
+                self.log(f"Sensor {entity} is {state}, skipping check", level="WARNING")
+                return
+                
+            current_value = float(state)
             
             # Determine which phase this is and get the corresponding threshold
             if entity == self.sensor_l1:
@@ -73,7 +110,7 @@ class PhaseCurrentAlert(hass.Hass):
             if current_value >= threshold:
                 self.log(f"Current on {phase} is {current_value}A, which exceeds the threshold of {threshold}A")
                 
-                # Check if we should send a notification (throttle to once per minute)
+                # Check if we should send a notification (throttle based on notification interval)
                 now = datetime.datetime.now()
                 last_time = self.last_notification_time[notification_key]
                 
@@ -83,19 +120,35 @@ class PhaseCurrentAlert(hass.Hass):
             
         except (ValueError, TypeError) as e:
             self.log(f"Error processing current value for {entity}: {e}", level="ERROR")
+        except Exception as e:
+            self.log(f"Unexpected error checking sensor {entity}: {e}", level="ERROR")
+            self.log(f"Traceback: {traceback.format_exc()}", level="ERROR")
     
     def check_current_values(self, kwargs):
         """Check all current sensors against their thresholds."""
-        self.check_specific_sensor(self.sensor_l1)
-        self.check_specific_sensor(self.sensor_l2)
-        self.check_specific_sensor(self.sensor_l3)
+        try:
+            self.log("Running scheduled check of all current sensors", level="DEBUG")
+            self.check_specific_sensor(self.sensor_l1)
+            self.check_specific_sensor(self.sensor_l2)
+            self.check_specific_sensor(self.sensor_l3)
+        except Exception as e:
+            self.log(f"Error in scheduled check: {e}", level="ERROR")
+            # Re-register the timer if it failed to ensure continuous monitoring
+            self.timer_handles.append(self.run_every(self.check_current_values, "now", self.notification_interval))
     
     def send_notification(self, phase, current_value, threshold):
         """Send a notification about the high current."""
         message = f"⚠️ High Current Alert: {phase} is at {current_value:.1f}A (threshold: {threshold}A). Please reduce load to avoid tripping the breaker."
         
         try:
-            self.call_service(self.notification_service, message=message)
-            self.log(f"Notification sent: {message}")
+            # Split the notification service into domain and service
+            parts = self.notification_service.split('/')
+            if len(parts) == 2:
+                domain, service = parts
+                self.call_service(f"{domain}/{service}", message=message)
+                self.log(f"Notification sent: {message}")
+            else:
+                self.log(f"Invalid notification service format: {self.notification_service}", level="ERROR")
         except Exception as e:
             self.log(f"Failed to send notification: {e}", level="ERROR")
+            self.log(f"Traceback: {traceback.format_exc()}", level="ERROR")
