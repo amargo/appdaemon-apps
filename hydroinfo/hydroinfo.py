@@ -88,7 +88,8 @@ class HydrologyData(hass.Hass):
 
                 # Validate and process water temperature sensor
                 try:
-                    if water_temp:
+                    # Check if water_temp is a valid number and not a dash or other non-numeric character
+                    if water_temp and water_temp != '-' and water_temp.replace('.', '', 1).isdigit():
                         water_temp_value = float(water_temp)
                         self.set_state(
                             "sensor.agard_water_temperature",
@@ -104,6 +105,8 @@ class HydrologyData(hass.Hass):
                         )
                         self.log(f"Water temperature sensor updated: {timestamp} - {water_temp_value} °C")
                         processed_water_temperature_row = True
+                    elif water_temp == '-':
+                        self.log(f"Water temperature not available (value is '-')", level="INFO")
                 except ValueError as e:
                     self.log(f"Failed to convert water temperature value: {water_temp} - Error: {e}", level="WARNING")
 
