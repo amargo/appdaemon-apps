@@ -24,7 +24,13 @@ class HydrologyData(hass.Hass):
         # Schedule the `read_data` function to run every hour
         interval_seconds = 1 * 60 * 60
         self.log(f"Scheduling read_data to run every {interval_seconds} seconds", level="INFO")
-        self.run_every(self.read_data, "now", interval_seconds)
+        
+        # Run immediately and then every hour
+        self.log("Running read_data immediately", level="INFO")
+        self.read_data({})
+        
+        # Schedule for future runs
+        self.run_every(self.read_data, "now+10", interval_seconds)
 
     def _fetch_data(self):
         """Fetch data from the water monitoring website"""
