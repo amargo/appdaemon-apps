@@ -1,0 +1,92 @@
+SensorUnavailable:
+  class: SensorUnavailable
+  module: sensor_unavailable
+  notification_service: notify/soulphone
+  sensors:
+    sensor.bedroom_z_temp_1_temperature:
+      friendly_name: Bedroom 1
+      check_interval: 21600  # 6 hours in seconds
+      same_val_check_enabled: true
+    
+    binary_sensor.motion_sensor_kitchen_1_occupancy:
+      friendly_name: Konyha mozgásérzékelő
+      check_interval: 86400  # 24 hours in seconds
+    
+    binary_sensor.motion_sensor_cellar_1_occupancy:
+      friendly_name: Pince mozgásérzékelő
+      check_interval: 115200  # 32 hours in seconds
+    
+    binary_sensor.entire_door_motion_occupancy:
+      friendly_name: Bejárati mozgásérzékelő
+      check_interval: 86400  # 24 hours in seconds
+    
+    # Window contacts with longer check intervals
+    binary_sensor.akos_room_window_contact:
+      friendly_name: Ákos ablak
+      check_interval: 144000  # 40 hours in seconds
+    
+    binary_sensor.abel_room_window_contact:
+      friendly_name: Ábel ablak
+      check_interval: 144000  # 40 hours in seconds
+    
+    binary_sensor.bathroom_window_contact:
+      friendly_name: Fűrdőszoba ablak
+      check_interval: 144000  # 40 hours in seconds
+    
+    binary_sensor.workroom_window_contact:
+      friendly_name: Dolgozó ablak
+      check_interval: 144000  # 40 hours in seconds
+    
+    # Temperature sensors
+    sensor.temperature_humidity_sensor_097b_temperature:
+      friendly_name: Bedroom 2
+      check_interval: 21600  # 6 hours in seconds
+    
+    sensor.temperature_humidity_sensor_3998_temperature:
+      friendly_name: Staircase
+      check_interval: 21600  # 6 hours in seconds
+    
+    sensor.temperature_humidity_sensor_79d1_temperature:
+      friendly_name: Akos Room
+      check_interval: 21600  # 6 hours in seconds
+    
+    sensor.temperature_humidity_sensor_860d_temperature:
+      friendly_name: Living Room 1
+      check_interval: 21600  # 6 hours in seconds
+    
+    sensor.living_room_z_temp_1_temperature:
+      friendly_name: Living Room 2
+      check_interval: 21600  # 6 hours in seconds
+    
+    sensor.temperature_humidity_sensor_88ad_temperature:
+      friendly_name: Kitchen
+      check_interval: 21600  # 6 hours in seconds
+    
+    sensor.temperature_humidity_sensor_ff63_temperature:
+      friendly_name: Fridge
+      check_interval: 21600  # 6 hours in seconds
+    
+    sensor.temperature_humidity_sensor_b122_temperature:
+      friendly_name: Office
+      check_interval: 21600  # 6 hours in seconds
+    
+    sensor.temperature_humidity_sensor_edad_temperature:
+      friendly_name: Abel Room
+      check_interval: 21600  # 6 hours in seconds
+    
+    sensor.temperature_humidity_sensor_f143_temperature:
+      friendly_name: Bathroom
+      check_interval: 21600  # 6 hours in seconds
+    
+    # Phase voltage sensors with shorter check intervals
+    sensor.fazisfeszultseg_l1:
+      friendly_name: Phase 1
+      check_interval: 1800  # 30 minutes in seconds
+    
+    sensor.fazisfeszultseg_l2:
+      friendly_name: Phase 2
+      check_interval: 1800  # 30 minutes in seconds
+    
+    sensor.fazisfeszultseg_l3:
+      friendly_name: Phase 3
+      check_interval: 1800  # 30 minutes in seconds
