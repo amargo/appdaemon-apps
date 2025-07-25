@@ -18,8 +18,8 @@ ev_charge_control:
   sensor_l1: sensor.pillanatnyi_aramerosseg_l1
   sensor_l2: sensor.pillanatnyi_aramerosseg_l2
   sensor_l3: sensor.pillanatnyi_aramerosseg_l3
-  threshold_l1: 16
-  threshold_l2: 16
+  threshold_l1: 17
+  threshold_l2: 17
   threshold_l3: 32
   
   # Notification service
