@@ -9,3 +9,6 @@ PhaseCurrentAlert:
   sensor_l3: sensor.pillanatnyi_aramerosseg_l3
   notification_service: notify/soulphone
   notification_interval: 60
+  
+  # Event name for other apps to listen to
+  event_name: phase_current_alert.threshold_exceeded

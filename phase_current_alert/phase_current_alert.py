@@ -29,6 +29,9 @@ class PhaseCurrentAlert(hass.Hass):
             # Get notification interval in seconds (default: 60 seconds = 1 minute)
             self.notification_interval = int(self.args.get("notification_interval", 60))
             
+            # Event name for threshold exceeded events
+            self.event_name = self.args.get("event_name", "phase_current_alert.threshold_exceeded")
+            
             # Time tracking for notification throttling
             self.last_notification_time = {
                 "l1": None,
@@ -40,13 +43,15 @@ class PhaseCurrentAlert(hass.Hass):
             self.listener_handles = []
             self.timer_handles = []
             
-            # Set up listeners for the current sensors
+            # Set up listeners for current sensors
             self.listener_handles.append(self.listen_state(self.current_changed, self.sensor_l1))
             self.listener_handles.append(self.listen_state(self.current_changed, self.sensor_l2))
             self.listener_handles.append(self.listen_state(self.current_changed, self.sensor_l3))
             
             # Schedule a regular check
             self.timer_handles.append(self.run_every(self.check_current_values, "now", self.notification_interval))
+            
+            self.log(f"Phase Current Alert initialized with event: {self.event_name}")
             
             # Perform an initial check of all sensors
             self.run_in(self.check_current_values, 5)  # Check after 5 seconds to ensure sensors are loaded
@@ -137,8 +142,18 @@ class PhaseCurrentAlert(hass.Hass):
             self.timer_handles.append(self.run_every(self.check_current_values, "now", self.notification_interval))
     
     def send_notification(self, phase, current_value, threshold):
-        """Send a notification about the high current."""
+        """Send a notification about the high current and fire an event."""
         message = f"⚠️ High Current Alert: {phase} is at {current_value:.1f}A (threshold: {threshold}A). Please reduce load to avoid tripping the breaker."
+        
+        # Fire an event that other apps can listen for
+        event_data = {
+            "phase": phase,
+            "current_value": current_value,
+            "threshold": threshold,
+            "timestamp": str(datetime.datetime.now())
+        }
+        self.log(f"Firing event: {self.event_name} with data: {event_data}")
+        self.fire_event(self.event_name, **event_data)
         
         try:
             # Split the notification service into domain and service

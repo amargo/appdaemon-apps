@@ -1,0 +1,26 @@
+---
+ev_charge_control:
+  module: ev_charge_control
+  class: EVChargeControl
+  
+  # Event to listen for
+  event_name: phase_current_alert.threshold_exceeded
+  
+  # Charging sensor and control parameters
+  charging_sensor: binary_sensor.e_niro_ev_battery_charge
+  min_available_current: 6
+  overload_threshold: 4
+  device_id: c3c81ec5-1fe4-4459-b6ba-474ea5acce79
+  stop_charge_service: kia_uvo/stop_charge
+  start_charge_service: kia_uvo/start_charge
+  
+  # Current sensors and thresholds (should match phase_current_alert settings)
+  sensor_l1: sensor.pillanatnyi_aramerosseg_l1
+  sensor_l2: sensor.pillanatnyi_aramerosseg_l2
+  sensor_l3: sensor.pillanatnyi_aramerosseg_l3
+  threshold_l1: 16
+  threshold_l2: 16
+  threshold_l3: 32
+  
+  # Notification service
+  notification_service: notify/soulphone

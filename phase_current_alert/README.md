@@ -1,6 +1,6 @@
 # Phase Current Alert
 
-An AppDaemon app for Home Assistant that monitors current (amperage) sensors and sends notifications when thresholds are exceeded.
+An AppDaemon app for Home Assistant that monitors current (amperage) sensors, sends notifications when thresholds are exceeded, and fires events that other apps can listen to.
 
 ## Description
 
@@ -12,6 +12,7 @@ This app monitors the current values of three phases (L1, L2, L3) and sends noti
 - Configurable thresholds for each phase
 - Sends notifications when current exceeds thresholds
 - Throttles notifications to once per minute to avoid notification spam
+- Fires events when thresholds are exceeded, allowing other apps to respond
 
 ## Installation
 
@@ -35,6 +36,7 @@ PhaseCurrentAlert:
   sensor_l3: sensor.pillanatnyi_aramerosseg_l3
   notification_service: notify/soulphone
   notification_interval: 60
+  event_name: phase_current_alert.threshold_exceeded
 ```
 
 ### Configuration Options
@@ -49,3 +51,19 @@ PhaseCurrentAlert:
 | `sensor_l3` | Entity ID for L3 phase current sensor | sensor.pillanatnyi_aramerosseg_l3 |
 | `notification_service` | Notification service to use | notify/mobile_app |
 | `notification_interval` | Interval in seconds between notifications | 60 |
+| `event_name` | Event name that will be fired when thresholds are exceeded | phase_current_alert.threshold_exceeded |
+
+### Events
+
+When a threshold is exceeded, the app fires an event with the following data:
+
+```json
+{
+  "phase": "L1",          // Phase name (L1, L2, or L3)
+  "current_value": 18.5,  // Current value in amperes
+  "threshold": 16.0,     // Threshold value in amperes
+  "timestamp": "2025-07-25 10:15:30.123456"  // Timestamp of the event
+}
+```
+
+Other apps can listen for this event and take appropriate actions, such as controlling EV charging or other high-power devices.
