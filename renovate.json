@@ -1,26 +1,94 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "config:best-practices",
+    ":ignoreModulesAndTests",
+    "group:monorepos",
+    "group:recommended",
+    ":pinDigestsDisabled",
+
+    "workarounds:all"
+  ],
+  "enabledManagers": [
+    "dockerfile",
+    "pip_requirements",
+    "github-actions"
   ],
   "packageRules": [
     {
-      "description": "Auto PR for minor and patch updates",
+      "matchDatasources": [
+        "docker"
+      ],
+      "pinDigests": false
+    },
+    {
+      "matchManagers": [
+        "dockerfile",
+        "devcontainer"
+      ],
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "groupName": "🐋 Docker minor updates",
+      "automerge": true,
+      "pinDigests": false
+    },
+    {
+      "matchManagers": [
+        "dockerfile",
+        "devcontainer"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": "🚢 Docker major updates",
+      "pinDigests": false
+    },
+    {
+      "matchManagers": [
+        "pip_requirements"
+      ],
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "automerge": true,
+      "groupName": "🐍 Python minor updates"
+    },
+    {
+      "matchManagers": [
+        "pip_requirements"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": "🐍 Python major updates",
+      "automerge": false
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
       "matchUpdateTypes": [
         "minor",
         "patch"
       ],
       "automerge": true,
-      "groupName": "all-minor-and-patch-updates"
+      "groupName": "⚡ GitHub Actions updates"
     },
     {
-      "description": "Group all major updates together",
       "matchUpdateTypes": [
-        "major"
+        "patch"
       ],
-      "groupName": "all-major-updates"
+      "automerge": true,
+      "groupName": "🔖 Patch updates"
     }
   ],
-  "commitMessageAction": "Update dependencies",
-  "commitMessagePrefix": "chore(deps):"
+  "vulnerabilityAlerts": {
+    "labels": [
+      "security"
+    ],
+    "osvVulnerabilityAlerts": true,
+    "automerge": false
+  }
 }
