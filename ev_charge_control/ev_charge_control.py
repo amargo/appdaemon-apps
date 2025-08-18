@@ -241,8 +241,9 @@ class EVChargeControl(hass.Hass):
                 parts = self.notification_service.split('/')
                 if len(parts) == 2:
                     domain, service = parts
-                    self.call_service(f"{domain}/{service}", message=message)
-                    self.log(f"Notification sent: {message}")
+                    escaped_msg = escape_markdown_v2(message)
+                    self.call_service(f"{domain}/{service}", message=escaped_msg)
+                    self.log(f"Notification sent: {escaped_msg}")
                     self.last_notification_time = now
                 else:
                     self.log(f"Invalid notification service format: {self.notification_service}", level="ERROR")
@@ -252,3 +253,10 @@ class EVChargeControl(hass.Hass):
         except Exception as e:
             self.log(f"Error sending notification: {e}", level="ERROR")
             self.log(f"Traceback: {traceback.format_exc()}", level="ERROR")
+
+    def escape_markdown_v2(text):
+        """
+        Escapes special characters for Telegram MarkdownV2.
+        """
+        escape_chars = r"_*[]()~`>#+-=|{}.!"
+        return ''.join(['\\' + c if c in escape_chars else c for c in text])
