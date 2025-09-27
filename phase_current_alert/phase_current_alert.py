@@ -160,7 +160,7 @@ class PhaseCurrentAlert(hass.Hass):
             parts = self.notification_service.split('/')
             if len(parts) == 2:
                 domain, service = parts
-                escaped_msg = escape_markdown_v2(message)
+                escaped_msg = self.escape_markdown_v2(message)
                 self.call_service(f"{domain}/{service}", message=escaped_msg)
                 self.log(f"Notification sent: {escaped_msg}")
             else:
@@ -169,9 +169,10 @@ class PhaseCurrentAlert(hass.Hass):
             self.log(f"Failed to send notification: {e}", level="ERROR")
             self.log(f"Traceback: {traceback.format_exc()}", level="ERROR")
 
-    def escape_markdown_v2(text):
+    def escape_markdown_v2(self, text):
         """
         Escapes special characters for Telegram MarkdownV2.
         """
+        text = text.replace('\\', '\\\\')
         escape_chars = r"_*[]()~`>#+-=|{}.!"
         return ''.join(['\\' + c if c in escape_chars else c for c in text])
