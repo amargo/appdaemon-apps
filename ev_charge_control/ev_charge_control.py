@@ -241,7 +241,7 @@ class EVChargeControl(hass.Hass):
                 parts = self.notification_service.split('/')
                 if len(parts) == 2:
                     domain, service = parts
-                    escaped_msg = escape_markdown_v2(message)
+                    escaped_msg = self.escape_markdown_v2(message)
                     self.call_service(f"{domain}/{service}", message=escaped_msg)
                     self.log(f"Notification sent: {escaped_msg}")
                     self.last_notification_time = now
