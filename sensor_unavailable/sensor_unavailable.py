@@ -65,10 +65,9 @@ class SensorMonitor:
     def notify_unavailable(self, kwargs):
         """Sends a notification if the sensor remains unavailable."""
         self.app.log(f"Sensor {self.friendly_name} is still unavailable after {self.unavailable_check_interval} seconds.")
-        self.app.call_service(
-            self.app.notification_service,
-            message=f"{self.friendly_name} sensor is unavailable for {self.unavailable_check_interval // 60} minutes."
-        )
+        message=f"{self.friendly_name} sensor is unavailable for {self.unavailable_check_interval // 60} minutes."
+        escaped_msg = self.escape_markdown_v2(message)
+        self.app.call_service(self.app.notification_service, escaped_msg)
         self.unavailable_timer = None  # Reset the timer
 
 
@@ -78,10 +77,9 @@ class SensorMonitor:
         if current_value == self.previous_value:
             self.unavailable = True
             interval_minutes = convert_to_minutes(self.check_interval)
-            self.app.call_service(
-                self.app.notification_service,
-                message=f"{self.friendly_name} sensor value has not changed for {interval_minutes} minutes."
-            )
+            message=f"{self.friendly_name} sensor value has not changed for {interval_minutes} minutes."
+            escaped_msg = self.escape_markdown_v2(message)
+            self.app.call_service(self.app.notification_service, escaped_msg)
         else:
             self.unavailable = False
             self.previous_value = current_value
@@ -127,6 +125,14 @@ class SensorUnavailable(hass.Hass):
         for entity_name, monitor in self.entities_to_watch.items():
             interval_minutes = convert_to_minutes(monitor.check_interval)
             self.log(f"- {entity_name} ({monitor.friendly_name}): Check interval {interval_minutes} minutes")
+
+    def escape_markdown_v2(self, text):
+        """
+        Escapes special characters for Telegram MarkdownV2.
+        """
+        text = text.replace('\\', '\\\\')
+        escape_chars = r"_*[]()~`>#+-=|{}.!"
+        return ''.join(['\\' + c if c in escape_chars else c for c in text])
 
     def create_sensor_monitor(self, entity_name, friendly_name, check_interval=6*60*60, same_val_check_enabled=True):
         """
