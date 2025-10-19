@@ -98,9 +98,9 @@ class EVChargeControl(hass.Hass):
             if new != old:
                 self.log(f"Charging state changed from {old} to {new}")
                 
-                # If charging stopped and we didn't stop it, reset our flag
-                if new == "off" and self.charging_stopped_by_app:
-                    self.log("Charging stopped externally, resetting charging_stopped_by_app flag")
+                # Only reset the flag when charging resumes (turns on)
+                if new == "on" and self.charging_stopped_by_app:
+                    self.log("Charging resumed externally, resetting charging_stopped_by_app flag")
                     self.charging_stopped_by_app = False
                     
         except Exception as e:
