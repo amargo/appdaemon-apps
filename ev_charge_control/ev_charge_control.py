@@ -18,6 +18,7 @@ class EVChargeControl(hass.Hass):
             # Get configuration parameters
             self.charging_sensor = self.args.get("charging_sensor")
             self.min_available_current = float(self.args.get("min_available_current", 6))
+            self.resume_delay_minutes = float(self.args.get("resume_delay_minutes", 0))
             self.overload_threshold = float(self.args.get("overload_threshold", 4))
             self.device_id = self.args.get("device_id")
             self.stop_charge_service = self.args.get("stop_charge_service")
@@ -41,6 +42,9 @@ class EVChargeControl(hass.Hass):
             
             # Time tracking for notification throttling
             self.last_notification_time = None
+            
+            # Track when enough current first becomes available (to avoid rapid stop/start toggling)
+            self.enough_current_since = None
             
             # Flag to track if charging was stopped by this app
             self.charging_stopped_by_app = False
@@ -98,10 +102,22 @@ class EVChargeControl(hass.Hass):
             if new != old:
                 self.log(f"Charging state changed from {old} to {new}")
                 
-                # Only reset the flag when charging resumes (turns on)
-                if new == "on" and self.charging_stopped_by_app:
-                    self.log("Charging resumed externally, resetting charging_stopped_by_app flag")
-                    self.charging_stopped_by_app = False
+                # Handle charging stopped (on -> off)
+                if new == "off":
+                    if self.charging_stopped_by_app:
+                        self.log("Charging stopped by app - keeping charging_stopped_by_app flag")
+                        # Keep flag True - app will handle resume
+                    else:
+                        self.log("Charging stopped externally - app will not attempt to resume")
+                        # Keep flag False - this was external stop
+                        
+                # Handle charging resumed (off -> on)
+                elif new == "on":
+                    if self.charging_stopped_by_app:
+                        self.log("Charging resumed externally, resetting charging_stopped_by_app flag")
+                        self.charging_stopped_by_app = False
+                    else:
+                        self.log("Charging resumed externally - app was not controlling it")
                     
         except Exception as e:
             self.log(f"Error in charging_state_changed: {e}", level="ERROR")
@@ -131,13 +147,24 @@ class EVChargeControl(hass.Hass):
         try:
             # Only check if we previously stopped charging and charging is still off
             if not self.charging_stopped_by_app or self.get_state(self.charging_sensor) == "on":
+                self.enough_current_since = None
                 return
                 
             # Check if there's enough available current
             has_enough_current, available_current = self.check_available_current()
             
             if has_enough_current:
-                self.resume_charging(available_current)
+                now = datetime.datetime.now()
+                if self.enough_current_since is None:
+                    self.enough_current_since = now
+                delay_seconds = max(0.0, self.resume_delay_minutes * 60.0)
+                stable_seconds = (now - self.enough_current_since).total_seconds()
+
+                if stable_seconds >= delay_seconds:
+                    self.enough_current_since = None
+                    self.resume_charging(available_current)
+            else:
+                self.enough_current_since = None
                 
         except Exception as e:
             self.log(f"Error checking if charging can be resumed: {e}", level="ERROR")

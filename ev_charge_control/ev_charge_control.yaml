@@ -9,6 +9,7 @@ ev_charge_control:
   # Charging sensor and control parameters
   charging_sensor: binary_sensor.e_niro_ev_battery_charge
   min_available_current: 6
+  resume_delay_minutes: 30
   overload_threshold: 4
   device_id: c3c81ec5-1fe4-4459-b6ba-474ea5acce79
   stop_charge_service: kia_uvo/stop_charge
