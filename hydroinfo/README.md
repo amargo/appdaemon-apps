@@ -18,11 +18,19 @@ HydrologyData:
   class: HydrologyData
   module: hydroinfo
   allomas_voa: "1649619E-97AB-11D4-BB62-00508BA24287"
+  water_level_entity: sensor.agard_water_level
+  water_level_friendly_name: "Agárd Water Level"
+  water_temperature_entity: sensor.agard_water_temperature
+  water_temperature_friendly_name: "Agárd Water Temperature"
 ```
 
 - **`class`**: Az osztály neve a szkriptben.
 - **`module`**: A Python modul neve (fájl `.py` kiterjesztés nélkül).
 - **`allomas_voa`**: Az állomás azonosítója (VOA kód) az adatok lekéréséhez.
+- **`water_level_entity`**: A vízállás szenzor Home Assistant entity ID-ja.
+- **`water_level_friendly_name`**: A vízállás szenzor megjelenített neve.
+- **`water_temperature_entity`**: A vízhőmérséklet szenzor Home Assistant entity ID-ja.
+- **`water_temperature_friendly_name`**: A vízhőmérséklet szenzor megjelenített neve.
 
 ### Telepítési lépések
 1. Mentsd el a Python szkriptet `hydroinfo.py` néven az AppDaemon `apps` könyvtárába.
@@ -31,6 +39,8 @@ HydrologyData:
 4. Ellenőrizd a naplókat, hogy az adatok sikeresen lekérhetők és a szenzorok létrejönnek-e a Home Assistantban.
 
 ### Létrehozott szenzorok
+A szenzorok entity ID-ja és megjelenített neve a YAML konfigurációban megadott értékekből jön.
+
 1. **`sensor.agard_water_level`**:
    - A vízállás értéket cm-ben jeleníti meg.
    - Attribútumok:
@@ -70,11 +80,19 @@ HydrologyData:
   class: HydrologyData
   module: hydroinfo
   allomas_voa: "1649619E-97AB-11D4-BB62-00508BA24287"
+  water_level_entity: sensor.agard_water_level
+  water_level_friendly_name: "Agárd Water Level"
+  water_temperature_entity: sensor.agard_water_temperature
+  water_temperature_friendly_name: "Agárd Water Temperature"
 ```
 
 - **`class`**: The name of the class in the script.
 - **`module`**: The name of the Python module (file without `.py` extension).
 - **`allomas_voa`**: The station identifier (VOA code) for fetching data.
+- **`water_level_entity`**: The Home Assistant entity ID for the water level sensor.
+- **`water_level_friendly_name`**: The display name for the water level sensor.
+- **`water_temperature_entity`**: The Home Assistant entity ID for the water temperature sensor.
+- **`water_temperature_friendly_name`**: The display name for the water temperature sensor.
 
 ### Deployment Steps
 1. Save the Python script as `hydroinfo.py` in your AppDaemon `apps` directory.
@@ -83,6 +101,8 @@ HydrologyData:
 4. Verify the logs to ensure data is being fetched and sensors are created in Home Assistant.
 
 ### Sensors Created
+The sensor entity IDs and display names come from the values configured in YAML.
+
 1. **`sensor.agard_water_level`**:
    - Represents the water level in cm.
    - Attributes:

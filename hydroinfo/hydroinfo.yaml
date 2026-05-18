@@ -2,3 +2,7 @@ HydrologyData:
   class: HydrologyData
   module: hydroinfo
   allomas_voa: "1649619E-97AB-11D4-BB62-00508BA24287"
+  water_level_entity: sensor.agard_water_level
+  water_level_friendly_name: "Agárd Water Level"
+  water_temperature_entity: sensor.agard_water_temperature
+  water_temperature_friendly_name: "Agárd Water Temperature"

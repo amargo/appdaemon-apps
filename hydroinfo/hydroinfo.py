@@ -1,5 +1,4 @@
 import hassapi as hass
-import json
 import requests
 import time
 import datetime
@@ -13,10 +12,26 @@ class HydrologyData(hass.Hass):
     def initialize(self):
         self.log(f"HydrologyData initializing at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}", level="INFO")
         
-        # Retrieve the 'allomas_voa' parameter from configuration
+        # Retrieve required parameters from configuration
         self.allomas_voa = self.args.get("allomas_voa")
-        if not self.allomas_voa:
-            self.log("Missing 'allomas_voa' in configuration", level="ERROR")
+        self.water_level_entity = self.args.get("water_level_entity")
+        self.water_level_friendly_name = self.args.get("water_level_friendly_name")
+        self.water_temperature_entity = self.args.get("water_temperature_entity")
+        self.water_temperature_friendly_name = self.args.get("water_temperature_friendly_name")
+
+        missing_args = [
+            arg_name
+            for arg_name in (
+                "allomas_voa",
+                "water_level_entity",
+                "water_level_friendly_name",
+                "water_temperature_entity",
+                "water_temperature_friendly_name",
+            )
+            if not self.args.get(arg_name)
+        ]
+        if missing_args:
+            self.log(f"Missing configuration value(s): {', '.join(missing_args)}", level="ERROR")
             return
         
         self.log(f"Using allomas_voa: {self.allomas_voa}", level="INFO")
@@ -42,7 +57,7 @@ class HydrologyData(hass.Hass):
         self.log(f"Requesting data from URL: {base_url}", level="INFO")
 
         request_start = time.time()
-        response = requests.get(base_url, headers=headers, verify=True)
+        response = requests.get(base_url, headers=headers, verify=True, timeout=20)
         request_time = time.time() - request_start
         self.log(f"HTTP request completed in {request_time:.2f} seconds with status code: {response.status_code}", level="INFO")
         
@@ -71,20 +86,25 @@ class HydrologyData(hass.Hass):
 
     def _process_water_level(self, timestamp, water_level):
         """Process and update water level sensor"""
-        if not water_level or not water_level.isdigit():
+        if not water_level:
             self.log(f"Invalid water level value: {water_level}", level="WARNING")
             return False
-            
-        water_level_value = int(water_level)
+
+        try:
+            water_level_value = int(water_level)
+        except ValueError:
+            self.log(f"Invalid water level value: {water_level}", level="WARNING")
+            return False
+
         self.set_state(
-            "sensor.agard_water_level",
+            self.water_level_entity,
             state=water_level_value,
             unit_of_measurement="cm",
             attributes={
                 "state_class": "measurement",
                 "last_changed": timestamp,
                 "unit_of_measurement": "cm",
-                "friendly_name": "Agárd Water Level",
+                "friendly_name": self.water_level_friendly_name,
                 "device_class": "measurement",
             },
         )
@@ -100,21 +120,17 @@ class HydrologyData(hass.Hass):
             self.log(f"Water temperature not available (value is '-')", level="INFO")
             return False
             
-        if not water_temp.replace('.', '', 1).isdigit():
-            self.log(f"Invalid water temperature value: {water_temp}", level="WARNING")
-            return False
-            
         try:
             water_temp_value = float(water_temp)
             self.set_state(
-                "sensor.agard_water_temperature",
+                self.water_temperature_entity,
                 state=water_temp_value,
                 unit_of_measurement="°C",
                 attributes={
                     "state_class": "measurement",
                     "last_changed": timestamp,
                     "unit_of_measurement": "°C",
-                    "friendly_name": "Agárd Water Temperature",
+                    "friendly_name": self.water_temperature_friendly_name,
                     "device_class": "temperature",
                 },
             )
