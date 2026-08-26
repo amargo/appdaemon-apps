@@ -9,6 +9,11 @@ from itertools import islice
 BASE_URL_TEMPLATE = "https://www.vizugy.hu/?mapModule=OpGrafikon&AllomasVOA={allomas_voa}&mapData=Idosor"
 
 class HydrologyData(hass.Hass):
+    @staticmethod
+    def _parse_decimal(value):
+        """Parse a decimal value independently of its decimal separator."""
+        return float(value.strip().replace(",", "."))
+
     def initialize(self):
         self.log(f"HydrologyData initializing at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}", level="INFO")
         
@@ -121,7 +126,7 @@ class HydrologyData(hass.Hass):
             return False
             
         try:
-            water_temp_value = float(water_temp)
+            water_temp_value = self._parse_decimal(water_temp)
             self.set_state(
                 self.water_temperature_entity,
                 state=water_temp_value,
