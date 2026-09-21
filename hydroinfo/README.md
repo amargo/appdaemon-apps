@@ -92,9 +92,9 @@ Kapcsoló nélkül mind a ~860 állomást kilistázza.
 ### Ismert korlátok
 - **Nem minden állomás mér vízhőmérsékletet.** Ahol nincs adat, ott a
   vízállás szenzor létrejön, a hőmérséklet szenzor nem. Ez nem hiba.
-- Az alkalmazás a *felszín közeli* vízhőt olvassa. Van olyan állomás
-  (például Balatonfüred), amelyik csak *mederfenék közeli* értéket közöl —
-  ott jelenleg nem jön létre hőmérséklet szenzor.
+- Az alkalmazás elsődlegesen a *felszín közeli* vízhőt olvassa. Ha az adott
+  állomás csak *mederfenék közeli* értéket közöl (például Balatonfüred),
+  akkor azt használja, és ezt a naplóba is kiírja.
 - A vizugy.hu időnként hiányos tanúsítványláncot küld: a köztes tanúsítványt
   nem szolgálja ki. A böngésző ezt magától pótolja, az OpenSSL nem, ezért a
   Python `SSLError`-ral eleshet. Ilyenkor töltsd le a köztes tanúsítványt és
@@ -228,9 +228,9 @@ Without arguments it lists all ~860 stations.
 - **Not every station measures water temperature.** Where there is no reading
   the water level sensor is still created, the temperature sensor is not.
   This is expected.
-- The app reads the *near surface* water temperature. Some stations (such as
-  Balatonfüred) only publish a *near river bed* value, so no temperature
-  sensor is created for them at the moment.
+- The app prefers the *near surface* water temperature. When a station only
+  publishes a *near river bed* value (Balatonfüred, for example) that reading
+  is used instead, and the fallback is written to the log.
 - vizugy.hu sometimes serves an incomplete certificate chain: the intermediate
   certificate is missing. Browsers fetch it automatically, OpenSSL does not,
   so Python can fail with `SSLError`. Download the intermediate and append it
