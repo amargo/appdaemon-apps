@@ -32,6 +32,81 @@ HydrologyData:
 - **`water_temperature_entity`**: A vízhőmérséklet szenzor Home Assistant entity ID-ja.
 - **`water_temperature_friendly_name`**: A vízhőmérséklet szenzor megjelenített neve.
 
+### Több állomás figyelése
+Az alkalmazás állomásonként egy példányt futtat. Nem kell hozzányúlni a Python
+kódhoz: vegyél fel az `apps.yaml`-ba még egy blokkot **másik legfelső szintű
+névvel**, és add meg benne a másik állomás `allomas_voa` kódját és a saját
+entity ID-jait.
+
+```yaml
+HydrologyData_agard:
+  class: HydrologyData
+  module: hydroinfo
+  allomas_voa: "1649619E-97AB-11D4-BB62-00508BA24287"
+  water_level_entity: sensor.agard_water_level
+  water_level_friendly_name: "Agárd Water Level"
+  water_temperature_entity: sensor.agard_water_temperature
+  water_temperature_friendly_name: "Agárd Water Temperature"
+
+HydrologyData_balatonfured:
+  class: HydrologyData
+  module: hydroinfo
+  allomas_voa: "164961AD-97AB-11D4-BB62-00508BA24287"
+  water_level_entity: sensor.balatonfured_water_level
+  water_level_friendly_name: "Balatonfüred Water Level"
+  water_temperature_entity: sensor.balatonfured_water_temperature
+  water_temperature_friendly_name: "Balatonfüred Water Temperature"
+```
+
+Amire figyelj:
+
+- A legfelső szintű név (`HydrologyData_agard`) tetszőleges, de **egyedi** kell
+  legyen. A `class` és a `module` minden blokkban ugyanaz marad.
+- Az `entity` értékek is legyenek egyediek, különben a példányok felülírják
+  egymás szenzorait.
+- Minden példány önállóan, óránként kérdezi le a saját állomását.
+
+### Az állomás `allomas_voa` kódjának megkeresése
+A VOA kód egy GUID, amit a vizugy.hu sehol nem ír ki szövegesen. Két módon
+juthatsz hozzá.
+
+**A böngészőből:** nyisd meg az
+[Operatív grafikon](https://www.vizugy.hu/?mapModule=OpGrafikon&mapData=Idosor)
+oldalt, válaszd ki a vízmércét a legördülő listából, és a címsorban megjelenő
+`AllomasVOA=...` érték lesz a kód.
+
+**A mellékelt szkripttel:** a `list_stations.py` letölti ugyanezt a listát és
+kikeresi belőle az állomást. Az ékezeteket és a kis/nagybetűt figyelmen kívül
+hagyja.
+
+```bash
+python list_stations.py agard
+# 1649619E-97AB-11D4-BB62-00508BA24287  Agárd (818   )
+
+python list_stations.py --yaml balatonfured
+# kiírja a fenti formátumú, beilleszthető apps.yaml blokkot
+```
+
+Kapcsoló nélkül mind a ~860 állomást kilistázza.
+
+### Ismert korlátok
+- **Nem minden állomás mér vízhőmérsékletet.** Ahol nincs adat, ott a
+  vízállás szenzor létrejön, a hőmérséklet szenzor nem. Ez nem hiba.
+- Az alkalmazás a *felszín közeli* vízhőt olvassa. Van olyan állomás
+  (például Balatonfüred), amelyik csak *mederfenék közeli* értéket közöl —
+  ott jelenleg nem jön létre hőmérséklet szenzor.
+- A vizugy.hu időnként hiányos tanúsítványláncot küld: a köztes tanúsítványt
+  nem szolgálja ki. A böngésző ezt magától pótolja, az OpenSSL nem, ezért a
+  Python `SSLError`-ral eleshet. Ilyenkor töltsd le a köztes tanúsítványt és
+  fűzd a CA csomagodhoz:
+
+  ```bash
+  curl -o ca.crt http://ovtlsca2026-ca.e-szigno.hu/ovtlsca2026.crt
+  openssl x509 -inform DER -in ca.crt -out ca.pem
+  cat "$(python -c 'import certifi; print(certifi.where())')" ca.pem > bundle.pem
+  python list_stations.py --ca-bundle bundle.pem agard
+  ```
+
 ### Telepítési lépések
 1. Mentsd el a Python szkriptet `hydroinfo.py` néven az AppDaemon `apps` könyvtárába.
 2. Frissítsd az `apps.yaml` fájlt a fenti módon.
@@ -93,6 +168,80 @@ HydrologyData:
 - **`water_level_friendly_name`**: The display name for the water level sensor.
 - **`water_temperature_entity`**: The Home Assistant entity ID for the water temperature sensor.
 - **`water_temperature_friendly_name`**: The display name for the water temperature sensor.
+
+### Monitoring More Than One Station
+The app runs one instance per station. No code change is needed: add another
+block to `apps.yaml` under a **different top-level name**, with that station's
+`allomas_voa` and its own entity IDs.
+
+```yaml
+HydrologyData_agard:
+  class: HydrologyData
+  module: hydroinfo
+  allomas_voa: "1649619E-97AB-11D4-BB62-00508BA24287"
+  water_level_entity: sensor.agard_water_level
+  water_level_friendly_name: "Agárd Water Level"
+  water_temperature_entity: sensor.agard_water_temperature
+  water_temperature_friendly_name: "Agárd Water Temperature"
+
+HydrologyData_balatonfured:
+  class: HydrologyData
+  module: hydroinfo
+  allomas_voa: "164961AD-97AB-11D4-BB62-00508BA24287"
+  water_level_entity: sensor.balatonfured_water_level
+  water_level_friendly_name: "Balatonfüred Water Level"
+  water_temperature_entity: sensor.balatonfured_water_temperature
+  water_temperature_friendly_name: "Balatonfüred Water Temperature"
+```
+
+Things to watch for:
+
+- The top-level name (`HydrologyData_agard`) is free-form but must be
+  **unique**. `class` and `module` stay the same in every block.
+- The entity IDs must be unique too, otherwise the instances overwrite each
+  other's sensors.
+- Each instance polls its own station once per hour, independently.
+
+### Finding the `allomas_voa` of a Station
+The VOA code is a GUID that vizugy.hu never shows as text. There are two ways
+to get it.
+
+**From the browser:** open the
+[operational chart page](https://www.vizugy.hu/?mapModule=OpGrafikon&mapData=Idosor),
+pick the gauge from the dropdown, and read the `AllomasVOA=...` value from the
+address bar.
+
+**With the bundled script:** `list_stations.py` downloads the same list and
+searches it. Matching ignores case and accents.
+
+```bash
+python list_stations.py agard
+# 1649619E-97AB-11D4-BB62-00508BA24287  Agárd (818   )
+
+python list_stations.py --yaml balatonfured
+# prints a ready to paste apps.yaml block in the format shown above
+```
+
+Without arguments it lists all ~860 stations.
+
+### Known Limitations
+- **Not every station measures water temperature.** Where there is no reading
+  the water level sensor is still created, the temperature sensor is not.
+  This is expected.
+- The app reads the *near surface* water temperature. Some stations (such as
+  Balatonfüred) only publish a *near river bed* value, so no temperature
+  sensor is created for them at the moment.
+- vizugy.hu sometimes serves an incomplete certificate chain: the intermediate
+  certificate is missing. Browsers fetch it automatically, OpenSSL does not,
+  so Python can fail with `SSLError`. Download the intermediate and append it
+  to your CA bundle:
+
+  ```bash
+  curl -o ca.crt http://ovtlsca2026-ca.e-szigno.hu/ovtlsca2026.crt
+  openssl x509 -inform DER -in ca.crt -out ca.pem
+  cat "$(python -c 'import certifi; print(certifi.where())')" ca.pem > bundle.pem
+  python list_stations.py --ca-bundle bundle.pem agard
+  ```
 
 ### Deployment Steps
 1. Save the Python script as `hydroinfo.py` in your AppDaemon `apps` directory.
