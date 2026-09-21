@@ -85,6 +85,13 @@ def print_table(stations):
     print("\n%d station(s)" % len(stations), file=sys.stderr)
 
 
+def print_markdown(stations):
+    print("| Station | `allomas_voa` |")
+    print("| --- | --- |")
+    for voa, name in stations:
+        print("| %s | `%s` |" % (name.replace("|", "\\|"), voa))
+
+
 def print_yaml(stations):
     for voa, name in stations:
         slug = slugify(name)
@@ -116,6 +123,12 @@ def main():
         help="print an apps.yaml block for each matching station",
     )
     parser.add_argument(
+        "--markdown",
+        action="store_true",
+        help="print the stations as a Markdown table, used to regenerate "
+             "STATIONS.md",
+    )
+    parser.add_argument(
         "--ca-bundle",
         metavar="PATH",
         help="CA bundle to verify vizugy.hu with, needed when the site does "
@@ -143,6 +156,8 @@ def main():
 
     if args.yaml:
         print_yaml(matches)
+    elif args.markdown:
+        print_markdown(matches)
     else:
         print_table(matches)
     return 0

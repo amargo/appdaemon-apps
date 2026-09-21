@@ -180,7 +180,6 @@ class HydrologyData(hass.Hass):
                 "last_changed": timestamp,
                 "unit_of_measurement": "cm",
                 "friendly_name": self.water_level_friendly_name,
-                "device_class": "measurement",
             },
         )
         self.log(f"Water level sensor updated: {timestamp} - {water_level_value} cm")
