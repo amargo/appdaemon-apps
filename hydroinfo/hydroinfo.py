@@ -24,6 +24,16 @@ class HydrologyData(hass.Hass):
         self.water_temperature_entity = self.args.get("water_temperature_entity")
         self.water_temperature_friendly_name = self.args.get("water_temperature_friendly_name")
 
+        self.verify_ssl = self._as_bool(self.args.get("verify_ssl", True), True)
+        self.allow_insecure_ssl_fallback = self._as_bool(
+            self.args.get("allow_insecure_ssl_fallback", False), False
+        )
+        if not self.verify_ssl:
+            self.log(
+                "SSL certificate verification is disabled by configuration.",
+                level="WARNING",
+            )
+
         missing_args = [
             arg_name
             for arg_name in (
@@ -52,6 +62,19 @@ class HydrologyData(hass.Hass):
         # Schedule for future runs
         self.run_every(self.read_data, "now+10", interval_seconds)
 
+    @staticmethod
+    def _as_bool(value, default):
+        """Convert YAML booleans and strings without treating 'false' as true."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "yes", "on", "1"}:
+                return True
+            if normalized in {"false", "no", "off", "0"}:
+                return False
+        return default
+
     def _fetch_data(self):
         """Fetch data from the water monitoring website"""
         user_agent = UserAgent().random
@@ -62,14 +85,51 @@ class HydrologyData(hass.Hass):
         self.log(f"Requesting data from URL: {base_url}", level="INFO")
 
         request_start = time.time()
-        response = requests.get(base_url, headers=headers, verify=True, timeout=20)
-        request_time = time.time() - request_start
-        self.log(f"HTTP request completed in {request_time:.2f} seconds with status code: {response.status_code}", level="INFO")
-        
+        try:
+            response = requests.get(
+                base_url,
+                headers=headers,
+                verify=self.verify_ssl,
+                timeout=20,
+            )
+        except requests.exceptions.SSLError as error:
+            self.log(
+                "TLS certificate verification failed. Check the container CA "
+                f"certificates or set verify_ssl to false. Details: {error}",
+                level="ERROR",
+            )
+            if not self.allow_insecure_ssl_fallback or not self.verify_ssl:
+                return None
+
+            # This is deliberately opt-in. It can keep the sensor working while
+            # the remote certificate chain is repaired, but weakens TLS security.
+            self.log(
+                "Retrying once with certificate verification disabled because "
+                "allow_insecure_ssl_fallback is enabled.",
+                level="WARNING",
+            )
+            try:
+                response = requests.get(
+                    base_url,
+                    headers=headers,
+                    verify=False,
+                    timeout=20,
+                )
+            except requests.exceptions.RequestException as fallback_error:
+                self.log(f"Fallback HTTP request failed: {fallback_error}", level="ERROR")
+                return None
+        except requests.exceptions.RequestException as error:
+            self.log(f"HTTP request failed: {error}", level="ERROR")
+            return None
+        finally:
+            request_time = time.time() - request_start
+            self.log(f"HTTP request finished in {request_time:.2f} seconds", level="INFO")
+
+        self.log(f"HTTP response status code: {response.status_code}", level="INFO")
         if response.status_code != 200:
             self.log(f"HTTP error: {response.status_code}", level="ERROR")
             return None
-            
+
         return response
 
     def _parse_html(self, response):
