@@ -49,11 +49,12 @@ class HydrologyData(hass.Hass):
             )
         elif isinstance(self.verify_ssl, str):
             self.log(f"Verifying TLS with the CA bundle at {self.verify_ssl}", level="INFO")
-            if not os.path.exists(self.verify_ssl):
+            if not os.path.isfile(self.verify_ssl):
                 self.log(
                     f"The configured CA bundle does not exist: {self.verify_ssl}",
                     level="ERROR",
                 )
+                return
 
         missing_args = [
             arg_name
@@ -102,11 +103,14 @@ class HydrologyData(hass.Hass):
 
         requests accepts either for its `verify` argument, so pointing this at
         a bundle that contains the missing intermediate certificate keeps
-        verification on instead of switching it off.
+        verification on instead of switching it off. Relative paths are resolved
+        against this module directory, independently of the working directory.
         """
         if isinstance(value, str):
             normalized = value.strip()
             if normalized and normalized.lower() not in TRUE_STRINGS | FALSE_STRINGS:
+                if not os.path.isabs(normalized):
+                    normalized = os.path.join(os.path.dirname(os.path.abspath(__file__)), normalized)
                 return normalized
         return cls._as_bool(value, True)
 

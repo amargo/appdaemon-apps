@@ -125,9 +125,15 @@ Kapcsoló nélkül mind a ~860 állomást kilistázza.
   ```
 
   ```yaml
-  verify_ssl: /config/appdaemon/apps/hydroinfo/vizugy-bundle.pem
+  verify_ssl: vizugy-bundle.pem
   allow_insecure_ssl_fallback: false
   ```
+
+  A `vizugy-bundle.pem` fájlt tedd a `hydroinfo.py` mellé. A relatív
+  útvonalakat az alkalmazás a modul könyvtárához képest oldja fel, így a
+  konténer eltérő csatolási útvonala nem okoz hibát. Abszolút útvonal is
+  megadható, de annak az AppDaemon konténerében kell léteznie. Ha a megadott
+  CA-fájl hiányzik vagy könyvtárra mutat, az inicializálás hibával leáll.
 
   A `list_stations.py` ugyanezt a csomagot a `--ca-bundle` kapcsolóval veszi
   át:
@@ -290,9 +296,15 @@ Without arguments it lists all ~860 stations.
   ```
 
   ```yaml
-  verify_ssl: /config/appdaemon/apps/hydroinfo/vizugy-bundle.pem
+  verify_ssl: vizugy-bundle.pem
   allow_insecure_ssl_fallback: false
   ```
+
+  Place `vizugy-bundle.pem` next to `hydroinfo.py`. The app resolves relative
+  paths against the module directory, so different container mount paths
+  do not break the configuration. Absolute paths are also supported, but
+  must exist inside the AppDaemon container. Initialization stops with an
+  error if the configured CA file is missing or points to a directory.
 
   `list_stations.py` takes the same bundle with `--ca-bundle`:
 
