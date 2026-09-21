@@ -31,6 +31,8 @@ HydrologyData:
 - **`water_level_friendly_name`**: A vízállás szenzor megjelenített neve.
 - **`water_temperature_entity`**: A vízhőmérséklet szenzor Home Assistant entity ID-ja.
 - **`water_temperature_friendly_name`**: A vízhőmérséklet szenzor megjelenített neve.
+- **`verify_ssl`** *(opcionális, alapértelmezés: `true`)*: ellenőrizze-e a vizugy.hu tanúsítványát.
+- **`allow_insecure_ssl_fallback`** *(opcionális, alapértelmezés: `false`)*: `SSLError` után egyszer próbálkozzon-e ellenőrzés nélkül. Lásd az [Ismert korlátok](#ismert-korlátok) szakaszt.
 
 ### Több állomás figyelése
 Az alkalmazás állomásonként egy példányt futtat. Nem kell hozzányúlni a Python
@@ -99,10 +101,20 @@ Kapcsoló nélkül mind a ~860 állomást kilistázza.
 - Az alkalmazás elsődlegesen a *felszín közeli* vízhőt olvassa. Ha az adott
   állomás csak *mederfenék közeli* értéket közöl (például Balatonfüred),
   akkor azt használja, és ezt a naplóba is kiírja.
-- A vizugy.hu időnként hiányos tanúsítványláncot küld: a köztes tanúsítványt
-  nem szolgálja ki. A böngésző ezt magától pótolja, az OpenSSL nem, ezért a
-  Python `SSLError`-ral eleshet. Ilyenkor töltsd le a köztes tanúsítványt és
-  fűzd a CA csomagodhoz:
+- **A vizugy.hu hiányos tanúsítványláncot küld.** A kiszolgált köztes
+  tanúsítvány (`e-Szigno OV TLS CA 2026`) nem az, amelyik a szervertanúsítványt
+  aláírta (`e-Szigno RSA OV TLS CA 2026`). A böngésző a hiányzót AIA-ból
+  magától letölti, az OpenSSL nem, ezért a Python `SSLError`-ral eleshet.
+
+  Az alkalmazásnak ehhez két kapcsolója van az `apps.yaml`-ban:
+
+  - `verify_ssl` (alapértelmezés: `true`) — a tanúsítvány ellenőrzése.
+  - `allow_insecure_ssl_fallback` (alapértelmezés: `false`) — `SSLError`
+    esetén egyszer újrapróbálja ellenőrzés nélkül. Naplózza, de **gyengíti a
+    TLS védelmet**, ezért csak átmeneti megoldásnak érdemes bekapcsolni.
+
+  A `list_stations.py` ugyanezt a helyzetet `--ca-bundle` kapcsolóval kezeli.
+  Ha a láncot inkább kipótolnád, mint hogy kikapcsold az ellenőrzést:
 
   ```bash
   curl -o ca.crt http://ovtlsca2026-ca.e-szigno.hu/ovtlsca2026.crt
@@ -172,6 +184,8 @@ HydrologyData:
 - **`water_level_friendly_name`**: The display name for the water level sensor.
 - **`water_temperature_entity`**: The Home Assistant entity ID for the water temperature sensor.
 - **`water_temperature_friendly_name`**: The display name for the water temperature sensor.
+- **`verify_ssl`** *(optional, default `true`)*: whether the vizugy.hu certificate is verified.
+- **`allow_insecure_ssl_fallback`** *(optional, default `false`)*: retry once without verification after an `SSLError`. See [Known Limitations](#known-limitations).
 
 ### Monitoring More Than One Station
 The app runs one instance per station. No code change is needed: add another
@@ -239,10 +253,20 @@ Without arguments it lists all ~860 stations.
 - The app prefers the *near surface* water temperature. When a station only
   publishes a *near river bed* value (Balatonfüred, for example) that reading
   is used instead, and the fallback is written to the log.
-- vizugy.hu sometimes serves an incomplete certificate chain: the intermediate
-  certificate is missing. Browsers fetch it automatically, OpenSSL does not,
-  so Python can fail with `SSLError`. Download the intermediate and append it
-  to your CA bundle:
+- **vizugy.hu serves an incomplete certificate chain.** The intermediate it
+  sends (`e-Szigno OV TLS CA 2026`) is not the one that signed the server
+  certificate (`e-Szigno RSA OV TLS CA 2026`). Browsers fetch the missing one
+  over AIA, OpenSSL does not, so Python can fail with `SSLError`.
+
+  The app has two options for this in `apps.yaml`:
+
+  - `verify_ssl` (default `true`) — whether the certificate is verified.
+  - `allow_insecure_ssl_fallback` (default `false`) — retry once without
+    verification after an `SSLError`. It is logged, but it **weakens TLS**,
+    so treat it as a temporary measure.
+
+  `list_stations.py` handles the same situation with `--ca-bundle`. To repair
+  the chain instead of turning verification off:
 
   ```bash
   curl -o ca.crt http://ovtlsca2026-ca.e-szigno.hu/ovtlsca2026.crt
