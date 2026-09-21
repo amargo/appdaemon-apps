@@ -8,11 +8,21 @@ from itertools import islice
 
 BASE_URL_TEMPLATE = "https://www.vizugy.hu/?mapModule=OpGrafikon&AllomasVOA={allomas_voa}&mapData=Idosor"
 
+# Column positions in the "vizmercelista" table:
+# Időpont | Vízállás (cm) | Vízhozam (m3/s) | Vízhő felszín (C°) | Vízhő mederfenék (C°)
+SURFACE_TEMPERATURE_COLUMN = 3
+BED_TEMPERATURE_COLUMN = 4
+
 class HydrologyData(hass.Hass):
     @staticmethod
     def _parse_decimal(value):
         """Parse a decimal value independently of its decimal separator."""
         return float(value.strip().replace(",", "."))
+
+    @staticmethod
+    def _has_reading(value):
+        """Return True when a table cell actually holds a measurement."""
+        return bool(value) and value.strip() not in ("", "-")
 
     def initialize(self):
         self.log(f"HydrologyData initializing at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}", level="INFO")
@@ -205,6 +215,24 @@ class HydrologyData(hass.Hass):
             self.log(f"Failed to convert water temperature value: {water_temp} - Error: {e}", level="WARNING")
             return False
 
+    def _select_water_temperature(self, cols):
+        """Pick the water temperature to publish for a table row.
+
+        The near surface reading is preferred. Some stations only publish a
+        near river bed value, so fall back to that column when the surface one
+        is empty, otherwise those stations would never get a sensor.
+        """
+        surface = cols[SURFACE_TEMPERATURE_COLUMN] if len(cols) > SURFACE_TEMPERATURE_COLUMN else ""
+        if self._has_reading(surface):
+            return surface
+
+        bed = cols[BED_TEMPERATURE_COLUMN] if len(cols) > BED_TEMPERATURE_COLUMN else ""
+        if self._has_reading(bed):
+            self.log("No near surface water temperature, using the near river bed reading", level="INFO")
+            return bed
+
+        return ""
+
     def _is_valid_row(self, cols):
         """Check if a row has enough valid data"""
         if len(cols) < 4:
@@ -247,7 +275,7 @@ class HydrologyData(hass.Hass):
                 
                 timestamp = cols[0]
                 water_level = cols[1]  # Vízállás (cm)
-                water_temp = cols[3]  # Vízhő (°C)
+                water_temp = self._select_water_temperature(cols)  # Vízhő (°C)
                 
                 # Process water level if not already processed
                 if not processed_water_level:
