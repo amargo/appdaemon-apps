@@ -31,7 +31,7 @@ HydrologyData:
 - **`water_level_friendly_name`**: A vízállás szenzor megjelenített neve.
 - **`water_temperature_entity`**: A vízhőmérséklet szenzor Home Assistant entity ID-ja.
 - **`water_temperature_friendly_name`**: A vízhőmérséklet szenzor megjelenített neve.
-- **`verify_ssl`** *(opcionális, alapértelmezés: `true`)*: ellenőrizze-e a vizugy.hu tanúsítványát.
+- **`verify_ssl`** *(opcionális, alapértelmezés: `true`)*: `true`, `false`, vagy egy CA csomag útvonala. Útvonal esetén az ellenőrzés bekapcsolva marad, csak a hiányzó köztes tanúsítványt pótolod.
 - **`allow_insecure_ssl_fallback`** *(opcionális, alapértelmezés: `false`)*: `SSLError` után egyszer próbálkozzon-e ellenőrzés nélkül. Lásd az [Ismert korlátok](#ismert-korlátok) szakaszt.
 
 ### Több állomás figyelése
@@ -108,19 +108,32 @@ Kapcsoló nélkül mind a ~860 állomást kilistázza.
 
   Az alkalmazásnak ehhez két kapcsolója van az `apps.yaml`-ban:
 
-  - `verify_ssl` (alapértelmezés: `true`) — a tanúsítvány ellenőrzése.
+  - `verify_ssl` (alapértelmezés: `true`) — `true`, `false`, vagy egy CA
+    csomag útvonala.
   - `allow_insecure_ssl_fallback` (alapértelmezés: `false`) — `SSLError`
     esetén egyszer újrapróbálja ellenőrzés nélkül. Naplózza, de **gyengíti a
     TLS védelmet**, ezért csak átmeneti megoldásnak érdemes bekapcsolni.
 
-  A `list_stations.py` ugyanezt a helyzetet `--ca-bundle` kapcsolóval kezeli.
-  Ha a láncot inkább kipótolnád, mint hogy kikapcsold az ellenőrzést:
+  A javasolt megoldás a lánc kipótolása, mert így az ellenőrzés bekapcsolva
+  marad. Készítsd el a csomagot, tedd oda, ahol az AppDaemon eléri, és add meg
+  a `verify_ssl`-ben:
 
   ```bash
   curl -o ca.crt http://ovtlsca2026-ca.e-szigno.hu/ovtlsca2026.crt
   openssl x509 -inform DER -in ca.crt -out ca.pem
-  cat "$(python -c 'import certifi; print(certifi.where())')" ca.pem > bundle.pem
-  python list_stations.py --ca-bundle bundle.pem agard
+  cat "$(python -c 'import certifi; print(certifi.where())')" ca.pem > vizugy-bundle.pem
+  ```
+
+  ```yaml
+  verify_ssl: /config/appdaemon/apps/hydroinfo/vizugy-bundle.pem
+  allow_insecure_ssl_fallback: false
+  ```
+
+  A `list_stations.py` ugyanezt a csomagot a `--ca-bundle` kapcsolóval veszi
+  át:
+
+  ```bash
+  python list_stations.py --ca-bundle vizugy-bundle.pem agard
   ```
 
 ### Telepítési lépések
@@ -184,7 +197,7 @@ HydrologyData:
 - **`water_level_friendly_name`**: The display name for the water level sensor.
 - **`water_temperature_entity`**: The Home Assistant entity ID for the water temperature sensor.
 - **`water_temperature_friendly_name`**: The display name for the water temperature sensor.
-- **`verify_ssl`** *(optional, default `true`)*: whether the vizugy.hu certificate is verified.
+- **`verify_ssl`** *(optional, default `true`)*: `true`, `false`, or the path of a CA bundle. With a path, verification stays on and you are only supplying the missing intermediate certificate.
 - **`allow_insecure_ssl_fallback`** *(optional, default `false`)*: retry once without verification after an `SSLError`. See [Known Limitations](#known-limitations).
 
 ### Monitoring More Than One Station
@@ -260,19 +273,31 @@ Without arguments it lists all ~860 stations.
 
   The app has two options for this in `apps.yaml`:
 
-  - `verify_ssl` (default `true`) — whether the certificate is verified.
+  - `verify_ssl` (default `true`) — `true`, `false`, or the path of a CA
+    bundle.
   - `allow_insecure_ssl_fallback` (default `false`) — retry once without
     verification after an `SSLError`. It is logged, but it **weakens TLS**,
     so treat it as a temporary measure.
 
-  `list_stations.py` handles the same situation with `--ca-bundle`. To repair
-  the chain instead of turning verification off:
+  Repairing the chain is the better option, because verification stays on.
+  Build the bundle, put it somewhere AppDaemon can read, and point
+  `verify_ssl` at it:
 
   ```bash
   curl -o ca.crt http://ovtlsca2026-ca.e-szigno.hu/ovtlsca2026.crt
   openssl x509 -inform DER -in ca.crt -out ca.pem
-  cat "$(python -c 'import certifi; print(certifi.where())')" ca.pem > bundle.pem
-  python list_stations.py --ca-bundle bundle.pem agard
+  cat "$(python -c 'import certifi; print(certifi.where())')" ca.pem > vizugy-bundle.pem
+  ```
+
+  ```yaml
+  verify_ssl: /config/appdaemon/apps/hydroinfo/vizugy-bundle.pem
+  allow_insecure_ssl_fallback: false
+  ```
+
+  `list_stations.py` takes the same bundle with `--ca-bundle`:
+
+  ```bash
+  python list_stations.py --ca-bundle vizugy-bundle.pem agard
   ```
 
 ### Deployment Steps
