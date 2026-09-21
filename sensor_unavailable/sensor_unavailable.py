@@ -32,7 +32,7 @@ class SensorMonitor:
 
     def on_entity_changed(self, entity, attribute, old, new, kwargs):
         """Handles changes in the sensor's state."""
-        if new and new.lower() in ["unknown", "unavailable"]:
+        if str(new).lower() in ["unknown", "unavailable"]:
             if not self.unavailable_timer:
                 self.unavailable_timer = self.app.run_in(self.notify_unavailable, self.unavailable_check_interval)
         else:
@@ -40,6 +40,7 @@ class SensorMonitor:
             if self.unavailable_timer:
                 self.app.cancel_timer(self.unavailable_timer)
                 self.unavailable_timer = None
+            self.unavailable = False
         #     if not self.unavailable:
         #         self.unavailable = True
         #         self.app.call_service(
@@ -67,27 +68,39 @@ class SensorMonitor:
         self.app.log(f"Sensor {self.friendly_name} is still unavailable after {self.unavailable_check_interval} seconds.")
         message=f"{self.friendly_name} sensor is unavailable for {self.unavailable_check_interval // 60} minutes."
         escaped_msg = self.escape_markdown_v2(message)
-        self.app.call_service(
-            self.app.notification_service,
-            escaped_msg
-        )
-        self.log(f"Notification sent: {escaped_msg}")
+        try:
+            self.app.call_service(
+                self.app.notification_service,
+                message=escaped_msg
+            )
+            self.app.log(f"Notification sent: {escaped_msg}")
+            self.unavailable = True
+        except Exception as error:
+            self.app.log(f"Could not send notification: {error}", level="ERROR")
         self.unavailable_timer = None  # Reset the timer
 
 
     def on_sensor_stays_same(self, kwargs):
         """Handles cases where the sensor value does not change over the interval."""
         current_value = self.app.get_state(self.entity_name)
+        if current_value is None or str(current_value).lower() in ["unknown", "unavailable"]:
+            self.same_val_timer = self.app.run_in(self.on_sensor_stays_same, self.check_interval)
+            return
+
         if current_value == self.previous_value:
-            self.unavailable = True
             interval_minutes = convert_to_minutes(self.check_interval)
             message=f"{self.friendly_name} sensor value has not changed for {interval_minutes} minutes."
             escaped_msg = self.escape_markdown_v2(message)
-            self.app.call_service(
-                self.app.notification_service,
-                escaped_msg
-            )
-            self.log(f"Notification sent: {escaped_msg}")
+            if not self.unavailable:
+                try:
+                    self.app.call_service(
+                        self.app.notification_service,
+                        message=escaped_msg
+                    )
+                    self.app.log(f"Notification sent: {escaped_msg}")
+                    self.unavailable = True
+                except Exception as error:
+                    self.app.log(f"Could not send notification: {error}", level="ERROR")
         else:
             self.unavailable = False
             self.previous_value = current_value
