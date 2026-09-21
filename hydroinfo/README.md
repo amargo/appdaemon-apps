@@ -67,8 +67,12 @@ Amire figyelj:
 - Minden példány önállóan, óránként kérdezi le a saját állomását.
 
 ### Az állomás `allomas_voa` kódjának megkeresése
-A VOA kód egy GUID, amit a vizugy.hu sehol nem ír ki szövegesen. Két módon
+A VOA kód egy GUID, amit a vizugy.hu sehol nem ír ki szövegesen. Három módon
 juthatsz hozzá.
+
+**A mellékelt listából:** a [STATIONS.md](STATIONS.md) tartalmazza mind a ~860
+állomást a kódjával együtt. Nem kell hozzá se hálózat, se szkript, elég
+rákeresni a névre. Pillanatkép, a lista újragenerálható a szkripttel.
 
 **A böngészőből:** nyisd meg az
 [Operatív grafikon](https://www.vizugy.hu/?mapModule=OpGrafikon&mapData=Idosor)
@@ -203,8 +207,12 @@ Things to watch for:
 - Each instance polls its own station once per hour, independently.
 
 ### Finding the `allomas_voa` of a Station
-The VOA code is a GUID that vizugy.hu never shows as text. There are two ways
-to get it.
+The VOA code is a GUID that vizugy.hu never shows as text. There are three
+ways to get it.
+
+**From the bundled list:** [STATIONS.md](STATIONS.md) contains all ~860
+stations with their codes. No network access and no script needed, just search
+for the name. It is a snapshot and can be regenerated with the script.
 
 **From the browser:** open the
 [operational chart page](https://www.vizugy.hu/?mapModule=OpGrafikon&mapData=Idosor),
