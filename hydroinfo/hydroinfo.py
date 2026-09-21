@@ -1,4 +1,5 @@
 import hassapi as hass
+import os
 import requests
 import time
 import datetime
@@ -7,6 +8,9 @@ from fake_useragent import UserAgent
 from itertools import islice
 
 BASE_URL_TEMPLATE = "https://www.vizugy.hu/?mapModule=OpGrafikon&AllomasVOA={allomas_voa}&mapData=Idosor"
+
+TRUE_STRINGS = {"true", "yes", "on", "1"}
+FALSE_STRINGS = {"false", "no", "off", "0"}
 
 # Column positions in the "vizmercelista" table:
 # Időpont | Vízállás (cm) | Vízhozam (m3/s) | Vízhő felszín (C°) | Vízhő mederfenék (C°)
@@ -34,15 +38,22 @@ class HydrologyData(hass.Hass):
         self.water_temperature_entity = self.args.get("water_temperature_entity")
         self.water_temperature_friendly_name = self.args.get("water_temperature_friendly_name")
 
-        self.verify_ssl = self._as_bool(self.args.get("verify_ssl", True), True)
+        self.verify_ssl = self._parse_verify_ssl(self.args.get("verify_ssl", True))
         self.allow_insecure_ssl_fallback = self._as_bool(
             self.args.get("allow_insecure_ssl_fallback", False), False
         )
-        if not self.verify_ssl:
+        if self.verify_ssl is False:
             self.log(
                 "SSL certificate verification is disabled by configuration.",
                 level="WARNING",
             )
+        elif isinstance(self.verify_ssl, str):
+            self.log(f"Verifying TLS with the CA bundle at {self.verify_ssl}", level="INFO")
+            if not os.path.exists(self.verify_ssl):
+                self.log(
+                    f"The configured CA bundle does not exist: {self.verify_ssl}",
+                    level="ERROR",
+                )
 
         missing_args = [
             arg_name
@@ -79,11 +90,25 @@ class HydrologyData(hass.Hass):
             return value
         if isinstance(value, str):
             normalized = value.strip().lower()
-            if normalized in {"true", "yes", "on", "1"}:
+            if normalized in TRUE_STRINGS:
                 return True
-            if normalized in {"false", "no", "off", "0"}:
+            if normalized in FALSE_STRINGS:
                 return False
         return default
+
+    @classmethod
+    def _parse_verify_ssl(cls, value):
+        """Read verify_ssl as a boolean or as the path of a CA bundle.
+
+        requests accepts either for its `verify` argument, so pointing this at
+        a bundle that contains the missing intermediate certificate keeps
+        verification on instead of switching it off.
+        """
+        if isinstance(value, str):
+            normalized = value.strip()
+            if normalized and normalized.lower() not in TRUE_STRINGS | FALSE_STRINGS:
+                return normalized
+        return cls._as_bool(value, True)
 
     def _fetch_data(self):
         """Fetch data from the water monitoring website"""
@@ -104,11 +129,12 @@ class HydrologyData(hass.Hass):
             )
         except requests.exceptions.SSLError as error:
             self.log(
-                "TLS certificate verification failed. Check the container CA "
-                f"certificates or set verify_ssl to false. Details: {error}",
+                "TLS certificate verification failed. Point verify_ssl at a CA "
+                "bundle that contains the missing intermediate certificate, or "
+                f"set it to false. Details: {error}",
                 level="ERROR",
             )
-            if not self.allow_insecure_ssl_fallback or not self.verify_ssl:
+            if not self.allow_insecure_ssl_fallback or self.verify_ssl is False:
                 return None
 
             # This is deliberately opt-in. It can keep the sensor working while

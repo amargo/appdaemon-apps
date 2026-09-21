@@ -6,7 +6,12 @@ HydrologyData:
   water_level_friendly_name: "Agárd Water Level"
   water_temperature_entity: sensor.agard_water_temperature
   water_temperature_friendly_name: "Agárd Water Temperature"
+  # true, false, vagy egy CA csomag útvonala. Útvonal esetén az ellenőrzés
+  # bekapcsolva marad, csak a hiányzó köztes tanúsítvány kerül pótlásra:
+  #   verify_ssl: /config/appdaemon/apps/hydroinfo/vizugy-bundle.pem
+  # A csomag elkészítése a README "Ismert korlátok" szakaszában van leírva.
   verify_ssl: true
   # A vizugy.hu jelenlegi certlánca nem validálható a konténer CA-tárával.
   # A hiba megjelenik a logban, majd egyszer verify=False-szal próbál.
+  # Ez gyengíti a TLS védelmet, a CA csomagos megoldás a biztonságosabb.
   allow_insecure_ssl_fallback: true
